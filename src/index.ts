@@ -3,11 +3,13 @@ import dotenv from 'dotenv'
 const Cosmos = require('@keplr-wallet/cosmos');
 import jwt from 'jsonwebtoken'
 import cors from 'cors'
+import { PrismaClient } from '@prisma/client'
 
 dotenv.config()
 
 const app: Express = express()
 const port = process.env.PORT
+const prisma = new PrismaClient()
 
 const SECRET_KEY = process.env.SECRET_KEY
 app.use(express.json())
@@ -23,20 +25,41 @@ app.post('/token', async (req: Request, res: Response) => {
   try {
     const { pubkey, address, signed, signature } = req.body
 
+    if (!pubkey || !address || !signed || !signature) {
+      return res.status(400).json({ error: 'Missing required fields' })
+    }
+
     const prefix = "tori"
-    const signatureBuffer = Buffer.from(signature, 'base64');
-    const uint8Signature = new Uint8Array(signatureBuffer);
-    const pubKeyValueBuffer = Buffer.from(pubkey, 'base64');
-    const pubKeyUint8Array = new Uint8Array(pubKeyValueBuffer);
-    const valid = Cosmos.verifyADR36Amino(prefix, address, signed, pubKeyUint8Array, uint8Signature);
+    const signatureBuffer = Buffer.from(signature, 'base64')
+    const uint8Signature = new Uint8Array(signatureBuffer)
+    const pubKeyValueBuffer = Buffer.from(pubkey, 'base64')
+    const pubKeyUint8Array = new Uint8Array(pubKeyValueBuffer)
+    const valid = Cosmos.verifyADR36Amino(prefix, address, signed, pubKeyUint8Array, uint8Signature)
 
     if (!valid) {
       return res.status(403).json({ error: 'Signature verification failed' })
     }
 
+    let user = await prisma.user.findUnique({
+      where: {
+        address: address,
+      },
+    })
+
+    if (!user) {
+      user = await prisma.user.create({
+        data: {
+          address: address,
+          sub: 'tori|' + address
+        },
+     })
+    }
+
+
+
     const payload = {
-      preferred_username: pubkey,
-      email: 'hello@world.com',
+      preferred_username: user.address,
+      email: user.address + '@tori.com',
       email_verified: true,
       given_name: '',
       family_name: '',
@@ -44,7 +67,7 @@ app.post('/token', async (req: Request, res: Response) => {
 
     const signOptions: jwt.SignOptions = {
       issuer: 'http://localhost:3000',
-      subject: 'tori|532cb4a4-7ad7-40a5-826a-c8272af2d9f3',
+      subject: user.sub,
       expiresIn: '30s',
       algorithm: 'HS256',
     }
