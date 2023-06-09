@@ -13,16 +13,10 @@ const app: Express = express()
 const port = process.env.PORT
 
 const SECRET_KEY = process.env.SECRET_KEY
-const CORS_FRONT_URL = process.env.CORS_FRONT_URL
-
 app.use(express.json())
 
 
-app.use(
-  cors({
-    origin: CORS_FRONT_URL,
-  })
-)
+app.use(cors())
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript Server')

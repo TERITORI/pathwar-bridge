@@ -1,0 +1,31 @@
+version: "3"
+services:
+
+  postgres:
+    image: postgres:15
+    container_name: sso_db
+    restart: on-failure
+    network_mode: "host"
+    env_file:
+      - ".env"
+    volumes:
+      - pathwar-bridge-db-data:/var/lib/postgresql/data
+
+
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    container_name: sso_server
+    restart: on-failure
+    network_mode: "host"
+    env_file:
+      - ".env"
+    volumes:
+      -  pathwar-bridge-build:/tmp/build
+    depends_on:
+      - postgres
+
+volumes:
+  pathwar-bridge-build:
+  pathwar-bridge-db-data:
