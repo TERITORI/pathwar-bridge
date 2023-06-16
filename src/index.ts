@@ -4,14 +4,15 @@ const Cosmos = require('@keplr-wallet/cosmos');
 import jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { PrismaClient } from '@prisma/client'
+import fs from "fs";
 
 dotenv.config()
 
 const app: Express = express()
 const port = process.env.PORT
 const prisma = new PrismaClient()
+const privateKEY = fs.readFileSync('private.key', 'utf8');
 
-const SECRET_KEY = process.env.SECRET_KEY
 app.use(express.json())
 
 
@@ -69,11 +70,11 @@ app.post('/token', async (req: Request, res: Response) => {
       issuer: 'http://localhost:3000',
       subject: user.sub,
       expiresIn: '30s',
-      algorithm: 'HS256',
+      algorithm: 'RS256',
     }
 
 
-    const token = jwt.sign(payload, SECRET_KEY as string, signOptions)
+    const token = jwt.sign(payload, privateKEY, signOptions)
 
     res.json({ token })
   } catch (error) {
