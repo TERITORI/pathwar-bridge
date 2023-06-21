@@ -1,3 +1,4 @@
+
 import express, { Express, Request, Response } from 'express'
 import dotenv from 'dotenv'
 const Cosmos = require('@keplr-wallet/cosmos');
@@ -5,18 +6,28 @@ import jwt from 'jsonwebtoken'
 import cors from 'cors'
 import { PrismaClient } from '@prisma/client'
 import fs from "fs";
+const http = require('http');
+const https = require('https');
 
 dotenv.config()
 
 const app: Express = express()
-const port = process.env.PORT
 const prisma = new PrismaClient()
 const privateKEY = fs.readFileSync('private.key', 'utf8');
 
 app.use(express.json())
 
-
 app.use(cors())
+
+const privateKey = fs.readFileSync('privkey.pem', 'utf8');
+const certificate = fs.readFileSync('cert.pem', 'utf8');
+const ca = fs.readFileSync('chain.pem', 'utf8');
+
+const credentials = {
+	key: privateKey,
+	cert: certificate,
+	ca: ca
+};
 
 app.get('/', (req: Request, res: Response) => {
   res.send('Express + TypeScript Server')
@@ -67,7 +78,7 @@ app.post('/token', async (req: Request, res: Response) => {
     }
 
     const signOptions: jwt.SignOptions = {
-      issuer: 'http://localhost:3000',
+      issuer: 'https://teriwar.mikatech.me/',
       subject: user.sub,
       expiresIn: '30s',
       algorithm: 'RS256',
@@ -83,6 +94,15 @@ app.post('/token', async (req: Request, res: Response) => {
   }
 })
 
-app.listen(port, () => {
-  console.log(`⚡️[server]: Server is running at http://localhost:${port}`)
-})
+
+
+const httpServer = http.createServer(app);
+const httpsServer = https.createServer(credentials, app);
+
+httpServer.listen(80, () => {
+	console.log('HTTP Server running on port 80');
+});
+
+httpsServer.listen(443, () => {
+	console.log('HTTPS Server running on port 443');
+});

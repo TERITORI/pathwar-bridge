@@ -20,7 +20,8 @@ services:
     container_name: sso_server
     restart: on-failure
     ports:
-      - "3000:3000"
+      - "80:80"
+      - "443:443"
     env_file:
       - ".env"
     volumes:
